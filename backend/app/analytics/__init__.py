@@ -47,6 +47,7 @@ from .timing import (
     is_retired,
     last_timed_lap,
     tower_sort_key,
+    tracks_retirements,
     visible_gaps,
 )
 from .stints import (
@@ -97,6 +98,7 @@ __all__ = [
     "is_retired",
     "last_timed_lap",
     "tower_sort_key",
+    "tracks_retirements",
     "visible_gaps",
     "DegradationFit",
     "PitSummary",

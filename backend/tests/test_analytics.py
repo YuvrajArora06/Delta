@@ -31,6 +31,7 @@ from app.analytics import (  # noqa: E402
     lap_window,
     safety_car_scenario,
     tower_sort_key,
+    tracks_retirements,
     undercut_scenario,
     visible_gaps,
 )
@@ -593,6 +594,13 @@ class TestTimingTower(unittest.TestCase):
 
     def test_no_retirements_before_the_session_starts(self):
         self.assertFalse(is_retired(0, 0))
+
+    def test_retirements_only_tracked_in_races(self):
+        """In qualifying, fewer laps is strategy, not a stopped car."""
+        self.assertTrue(tracks_retirements("Race"))
+        self.assertFalse(tracks_retirements("Qualifying"))
+        self.assertFalse(tracks_retirements("Practice"))
+        self.assertFalse(tracks_retirements(None))
 
     def test_retired_car_shows_no_gaps(self):
         gap_leader, interval = visible_gaps(
