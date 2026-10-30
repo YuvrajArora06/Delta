@@ -1,4 +1,4 @@
-"""Runtime configuration for Delta.
+"""Runtime configuration for ApexTelemetry.
 
 Credentials are read from the environment on the server only. Nothing in this
 module is ever serialised to the browser — the frontend talks to this backend,

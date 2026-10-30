@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Delta",
+  title: "ApexTelemetry",
   description:
     "Formula 1 telemetry, lap delta, corner and strategy analysis for race engineers.",
 };
@@ -26,7 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="sticky top-0 z-30 border-b border-graphite-700 bg-graphite-950/95 backdrop-blur">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
               <Link href="/" className="flex items-baseline gap-2">
-                <span className="text-sm font-bold tracking-[0.2em] text-ink">DELTA</span>
+                <span className="text-sm font-bold tracking-[0.2em] text-ink">APEX</span>
+                <span className="text-sm font-light tracking-[0.2em] text-ink-faint">
+                  TELEMETRY
+                </span>
               </Link>
 
               <nav className="flex flex-wrap items-center gap-1" aria-label="Workspaces">
@@ -51,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <footer className="border-t border-graphite-800 px-4 py-3">
             <p className="text-2xs leading-relaxed text-ink-faint">
-              Data from OpenF1 (openf1.org). Delta and OpenF1 are unofficial and not
+              Data from OpenF1 (openf1.org). ApexTelemetry and OpenF1 are unofficial and not
               affiliated with Formula 1, the FIA or Formula One Management. OpenF1 content is
               CC BY-NC-SA 4.0 and intended for educational, personal, research and
               non-commercial use; commercial or redistributive use requires separate

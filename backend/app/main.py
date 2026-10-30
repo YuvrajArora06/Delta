@@ -1,4 +1,4 @@
-"""Delta backend.
+"""ApexTelemetry backend.
 
 Run with:  uvicorn app.main:app --reload --port 8000
 """
@@ -17,14 +17,14 @@ from .providers import ProviderError, shutdown_providers
 from .routers import analysis, catalog, engineer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-log = logging.getLogger("delta")
+log = logging.getLogger("apex")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
     log.info(
-        "Delta starting — provider=%s tier=%s live_access=%s cache=%s",
+        "ApexTelemetry starting — provider=%s tier=%s live_access=%s cache=%s",
         settings.provider.name,
         settings.provider.tier,
         settings.provider.has_live_access,
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Delta",
+    title="ApexTelemetry",
     description=(
         "Formula 1 telemetry, lap delta, corner and strategy analysis. "
         "Every response distinguishes measured, calculated and estimated values."
@@ -85,7 +85,7 @@ app.include_router(engineer.router)
 async def root() -> dict:
     settings = get_settings()
     return {
-        "name": "Delta",
+        "name": "ApexTelemetry",
         "docs": "/docs",
         "provider": settings.provider.name,
         "live_access": settings.provider.has_live_access,

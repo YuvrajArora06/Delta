@@ -28,7 +28,7 @@ from .config import get_settings
 from .providers.base import ProviderError
 from .providers.openf1 import OpenF1Provider
 
-log = logging.getLogger("delta.warm")
+log = logging.getLogger("apex.warm")
 
 # Everything a session page reads except per-lap telemetry.
 ENDPOINTS = (

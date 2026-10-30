@@ -122,7 +122,7 @@ class OpenF1Provider:
         self._cfg: ProviderSettings = settings.provider
         self._cache = ResponseCache(settings.cache_dir / "openf1")
         self._bucket = TokenBucket(self._cfg.requests_per_second, self._cfg.requests_per_minute)
-        headers = {"User-Agent": "Delta/1.0 (+engineering-analytics)"}
+        headers = {"User-Agent": "ApexTelemetry/1.0 (+engineering-analytics)"}
         if self._cfg.api_key:
             # Sponsor-tier credential. Server side only — never reaches a browser.
             headers["Authorization"] = f"Bearer {self._cfg.api_key}"

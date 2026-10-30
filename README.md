@@ -1,4 +1,4 @@
-# Delta
+# ApexTelemetry
 
 A Formula 1 telemetry, lap-delta, corner and strategy analysis workstation, built
 on real OpenF1 data from 2023 onward.
@@ -426,7 +426,7 @@ the cache in `/tmp`), the cache is only as permanent as the instance.
 
 ## Attribution and licensing
 
-Data from **OpenF1** (openf1.org). Delta and OpenF1 are unofficial and
+Data from **OpenF1** (openf1.org). ApexTelemetry and OpenF1 are unofficial and
 not affiliated with Formula 1, the FIA or Formula One Management.
 
 OpenF1 site content is licensed **CC BY-NC-SA 4.0**. The project describes its
