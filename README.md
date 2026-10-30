@@ -40,6 +40,21 @@ npm run dev
 
 Open http://localhost:3000. Interactive API docs are at http://localhost:8000/docs.
 
+### Resetting the frontend development server
+
+Do not run `npm run build` while `npm run dev` is active: both commands write to
+`frontend/.next`, and mixing their output can cause a missing-module 500 error.
+Stop the dev server before making a production build. If a stale `.next` cache
+does cause an error, start fresh with:
+
+```bash
+cd frontend
+npm run dev:clean
+```
+
+`dev:clean` removes only Next.js's generated `.next` directory before starting
+the development server.
+
 **No API key is required.** OpenF1's Community tier needs no credential and
 covers every session from 2023 onward.
 
