@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo } from "react";
 
 import { api, type SessionInfo } from "@/lib/api";
 import { localTime, sessionLabel } from "@/lib/format";
-import { useAsync } from "./ui";
+import { ErrorPanel, useAsync } from "./ui";
 
 /**
  * Season → Grand Prix → Session.
@@ -85,6 +85,12 @@ export function SessionPicker({ compact = false }: { compact?: boolean }) {
     [selection.meetingKey],
     selection.meetingKey != null,
   );
+  const catalogError = seasons.error ?? meetings.error ?? sessions.error;
+  const retryCatalog = seasons.error
+    ? seasons.reload
+    : meetings.error
+      ? meetings.reload
+      : sessions.reload;
 
   // Default to the most recent weekend that has actually started, so the
   // workstation is never sitting empty waiting for three dropdowns.
@@ -220,6 +226,11 @@ export function SessionPicker({ compact = false }: { compact?: boolean }) {
           <WeekendOverview sessions={sessions.data.sessions} active={selection.sessionKey} />
         </div>
       ) : null}
+      {catalogError && (
+        <div className="md:col-span-3 rounded border border-signal-alert/30 bg-signal-alert/5">
+          <ErrorPanel error={catalogError} onRetry={retryCatalog} />
+        </div>
+      )}
     </div>
   );
 }
