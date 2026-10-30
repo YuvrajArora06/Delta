@@ -7,6 +7,12 @@ would burn the provider's rate limit for nothing. So:
 * Requests tagged ``immutable`` land on disk and are served from there forever.
 * Requests tagged ``volatile`` sit in memory for a few seconds, which is enough
   to collapse the fan-out when eight UI panels all ask for the same poll tick.
+
+An empty answer is the one exception to "forever". The provider answers a
+finished session with no rows both when the data genuinely does not exist and
+when it has not been ingested yet, and those cannot be told apart. So an empty
+result is written as a marker with an expiry and asked for again once it lapses,
+rather than freezing a gap into the archive permanently.
 """
 
 from __future__ import annotations
@@ -68,12 +74,20 @@ class ResponseCache:
             return None
         try:
             with gzip.open(path, "rt", encoding="utf-8") as fh:
-                return json.load(fh)
+                value = json.load(fh)
         except (OSError, json.JSONDecodeError):
             # A truncated cache file is not an error worth surfacing; drop it
             # and let the caller re-fetch.
             path.unlink(missing_ok=True)
             return None
+        # Provider payloads are always arrays, so an object can only be an
+        # empty-result marker written by set_disk_empty.
+        if isinstance(value, dict) and "empty_until" in value:
+            if value["empty_until"] > time.time():
+                return []
+            path.unlink(missing_ok=True)
+            return None
+        return value
 
     def set_disk(self, url: str, params: dict[str, Any], value: Any) -> None:
         path = self._path(url, params)
@@ -85,6 +99,10 @@ class ResponseCache:
             tmp.replace(path)
         except OSError:
             tmp.unlink(missing_ok=True)
+
+    def set_disk_empty(self, url: str, params: dict[str, Any], ttl_seconds: float) -> None:
+        """Remember that a request returned no rows, but only for ``ttl_seconds``."""
+        self.set_disk(url, params, {"empty_until": time.time() + ttl_seconds})
 
     # -- request coalescing ------------------------------------------------
 
@@ -115,9 +133,10 @@ class ResponseCache:
             fut.set_result(result)
         return result
 
-    def stats(self) -> dict[str, int]:
+    def stats(self) -> dict[str, int | str]:
         files = list(self._dir.rglob("*.json.gz")) if self._dir.exists() else []
         return {
+            "directory": str(self._dir.resolve()),
             "memory_entries": len(self._memory),
             "disk_entries": len(files),
             "disk_bytes": sum(f.stat().st_size for f in files),

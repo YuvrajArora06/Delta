@@ -59,15 +59,30 @@ class ProviderSettings:
         return "sponsor" if self.has_live_access else "community"
 
 
+# Anchored to the backend directory rather than the working directory, so the
+# server finds the same permanent cache whichever folder it is started from.
+DEFAULT_CACHE_DIR = Path(__file__).resolve().parents[1] / ".apex-cache"
+
+
 @dataclass(frozen=True)
 class Settings:
     provider: ProviderSettings = field(default_factory=ProviderSettings)
-    cache_dir: Path = Path(os.getenv("APEX_CACHE_DIR", ".apex-cache"))
+    cache_dir: Path = DEFAULT_CACHE_DIR
 
     # Completed sessions never change, so they are cached indefinitely on disk.
     # Anything inside the live window is held only for a few seconds in memory.
     live_cache_seconds: float = 3.0
     recent_cache_seconds: float = 120.0
+
+    # How long after a session ends before its data is treated as final and
+    # written to disk for good. The provider re-ingests and corrects sessions
+    # in the hours after they finish; caching too early would freeze the
+    # uncorrected version permanently.
+    settle_hours: float = 24.0
+
+    # An empty answer for a finished session is re-checked after this long,
+    # because "no rows" can also mean "not ingested yet".
+    empty_retry_hours: float = 24.0
 
     # OpenF1 treats a session as live from 30 min before to 30 min after.
     live_window_minutes: int = 30
@@ -93,7 +108,9 @@ def get_settings() -> Settings:
     origins = os.getenv("APEX_CORS_ORIGINS")
     return Settings(
         provider=provider,
-        cache_dir=Path(os.getenv("APEX_CACHE_DIR", ".apex-cache")),
+        cache_dir=Path(os.getenv("APEX_CACHE_DIR") or DEFAULT_CACHE_DIR),
+        settle_hours=_env_float("APEX_SETTLE_HOURS", 24.0),
+        empty_retry_hours=_env_float("APEX_EMPTY_RETRY_HOURS", 24.0),
         cors_origins=tuple(o.strip() for o in origins.split(",")) if origins else Settings.cors_origins,
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
         anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5"),

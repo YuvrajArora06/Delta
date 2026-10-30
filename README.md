@@ -18,7 +18,7 @@ and a difference between two drivers is only called significant when it exceeds
 the combined sampling uncertainty of both traces.
 
 **Stack:** FastAPI · numpy/scipy · Next.js · TypeScript · ECharts · Tailwind
-**Tests:** 62, run against a synthetic circuit with known ground truth
+**Tests:** 95, run against a synthetic circuit with known ground truth
 
 ---
 
@@ -110,10 +110,12 @@ backend/
       corners.py           circuit geometry from position, corner metrics
       stints.py            degradation regression, pit stops, scenarios
     service.py             orchestration between provider and analytics
+    warm.py                pre-fills the permanent cache (python -m app.warm)
     routers/               FastAPI routes
   tests/
     synthetic.py           a constructed circuit with known ground truth
-    test_analytics.py      62 tests
+    test_analytics.py      analytics against known ground truth
+    test_cache.py          permanent-cache policy, against a fake OpenF1
 
 frontend/
   app/                     Next.js App Router: timing, telemetry, corners,
@@ -256,7 +258,7 @@ evidence is the valuable part; the prose is a convenience.
 
 ```bash
 cd backend
-python -m unittest discover -s tests -t .     # 62 tests, no network required
+python -m unittest discover -s tests -t .     # 95 tests, no network required
 # or, with pytest installed:  pytest tests/
 ```
 
@@ -288,7 +290,9 @@ exclusion.
 | `OPENF1_API_KEY` | unset | Sponsor tier; unlocks the live window |
 | `OPENF1_BASE_URL` | `https://api.openf1.org/v1` | |
 | `OPENF1_RPS` / `OPENF1_RPM` | 2.5 / 28 | Kept under the published ceiling |
-| `APEX_CACHE_DIR` | `.apex-cache` | Disk cache for completed sessions |
+| `APEX_CACHE_DIR` | `backend/.apex-cache` | Permanent disk cache for settled sessions |
+| `APEX_SETTLE_HOURS` | 24 | Hours after a session ends before its data is cached for good |
+| `APEX_EMPTY_RETRY_HOURS` | 24 | How long an empty answer is trusted before it is asked again |
 | `APEX_CORS_ORIGINS` | `localhost:3000` | Comma-separated |
 | `ANTHROPIC_API_KEY` | unset | Optional, race-engineer narration |
 
@@ -305,9 +309,19 @@ exposed to browser code.
 
 ## Performance notes
 
-- **Completed sessions are immutable**, so they are cached to disk gzipped and
-  never re-fetched. Only data inside the live window uses the short-lived memory
-  tier.
+- **Settled sessions are cached permanently.** Every endpoint for a session —
+  laps, telemetry, positions, intervals, race control, weather — is written to
+  disk gzipped once the session is final, and never fetched again, across
+  restarts. `GET /api/cache` reports the cache size and how many requests still
+  went upstream.
+- **"Final" means 24 hours after the session ends.** Before that the provider is
+  still re-ingesting and correcting data, so recent sessions stay in a two-minute
+  memory tier, and live ones in a three-second tier. A session that has not run
+  yet is never cached permanently.
+- **Empty answers expire.** "No rows" can mean "not ingested yet", so it is
+  remembered for a day rather than forever.
+- **Lap data is fetched for the whole field once** and filtered per driver, so the
+  first lap request in a settled session serves all twenty cars.
 - **Telemetry is never fetched session-wide.** Every car-data read is scoped to
   one driver and one lap's time window. A race across twenty cars is tens of
   millions of samples; the UI needs a few thousand.
@@ -315,6 +329,21 @@ exposed to browser code.
   panels asking for the same poll tick produce one upstream call.
 - A dual-window token bucket enforces both the per-second and per-minute ceiling,
   because 429s cost more time than throttling does.
+
+### Pre-filling the cache
+
+```bash
+cd backend
+.venv/bin/python -m app.warm                     # every season, 2023 to now
+.venv/bin/python -m app.warm --years 2025 2026   # or just some
+```
+
+This fetches every endpoint except per-lap telemetry for every settled session.
+That is a few thousand requests, about two hours at the Community-tier limit. It
+can be stopped and restarted at any point: cached data costs no request, so a
+rerun continues where the last one stopped. Telemetry is cached lap by lap as it
+is requested. On hosts whose disk is wiped on restart (Render's free tier keeps
+the cache in `/tmp`), the cache is only as permanent as the instance.
 
 ---
 

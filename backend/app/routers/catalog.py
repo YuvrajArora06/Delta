@@ -28,6 +28,21 @@ async def health() -> dict:
     }
 
 
+@router.get("/cache")
+async def cache() -> dict:
+    """How much provider data is held locally, and how often we still go upstream."""
+    service = SessionService()
+    stats = getattr(service.provider, "cache_stats", None)
+    if stats is None:
+        raise HTTPException(404, "This provider has no response cache.")
+    settings = service.settings
+    return {
+        **stats(),
+        "settle_hours": settings.settle_hours,
+        "empty_retry_hours": settings.empty_retry_hours,
+    }
+
+
 @router.get("/providers")
 async def providers() -> dict:
     """Every registered adapter and, importantly, what each one cannot do."""
