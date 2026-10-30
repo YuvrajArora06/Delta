@@ -43,9 +43,19 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.25" },
         },
+        radioBar: {
+          "0%, 100%": { transform: "scaleY(0.5)" },
+          "50%": { transform: "scaleY(1.4)" },
+        },
+        messageIn: {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "pulse-dot": "pulseDot 1.6s ease-in-out infinite",
+        "radio-bar": "radioBar 0.9s ease-in-out infinite",
+        "message-in": "messageIn 0.2s ease-out",
       },
     },
   },
