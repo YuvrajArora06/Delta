@@ -252,9 +252,18 @@ export interface Corner {
   notes: string[];
 }
 
+export interface CircuitSector {
+  number: number;
+  start_m: number;
+  end_m: number;
+  duration_s: number;
+  provenance: Provenance;
+}
+
 export interface CircuitMapResponse {
   circuit: {
     corners: Corner[];
+    sectors: CircuitSector[];
     x: (number | null)[] | null;
     y: (number | null)[] | null;
     distance: (number | null)[];

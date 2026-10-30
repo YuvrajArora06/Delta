@@ -23,6 +23,7 @@ from .braking import (
 )
 from .corners import (
     CircuitMap,
+    CircuitSector,
     Corner,
     CornerComparison,
     CornerDetectionConfig,
@@ -31,6 +32,7 @@ from .corners import (
     compare_corner,
     corner_metrics,
     corner_metrics_for_lap,
+    sectors_from_lap,
 )
 from .delta import (
     DeltaRegion,
@@ -77,6 +79,7 @@ __all__ = [
     "brake_event_before",
     "detect_brake_events",
     "CircuitMap",
+    "CircuitSector",
     "Corner",
     "CornerComparison",
     "CornerDetectionConfig",
@@ -85,6 +88,7 @@ __all__ = [
     "compare_corner",
     "corner_metrics",
     "corner_metrics_for_lap",
+    "sectors_from_lap",
     "DeltaRegion",
     "LapDelta",
     "LapQuality",

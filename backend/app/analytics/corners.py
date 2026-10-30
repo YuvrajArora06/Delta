@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from ..models import Lap
 from .alignment import LapTrace
 from .braking import (
     BrakeDetectionConfig,
@@ -108,6 +109,15 @@ class Corner:
 
 
 @dataclass
+class CircuitSector:
+    number: int
+    start_m: float
+    end_m: float
+    duration_s: float
+    provenance: str = "calculated"
+
+
+@dataclass
 class CircuitMap:
     corners: list[Corner]
     x: np.ndarray | None
@@ -121,6 +131,7 @@ class CircuitMap:
     config: dict
     method: str
     notes: list[str] = field(default_factory=list)
+    sectors: list[CircuitSector] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------------
@@ -158,12 +169,51 @@ def _smooth(values: np.ndarray, window_pts: int) -> np.ndarray:
     return np.convolve(padded, kernel, mode="valid")[: values.size]
 
 
+def sectors_from_lap(trace: LapTrace, lap: Lap) -> tuple[list[CircuitSector], str | None]:
+    """Locate the sector boundaries on a lap's distance axis.
+
+    The feed publishes how long each sector took, not where it ends, so each
+    boundary is the distance the car had covered when that time had elapsed.
+    Sector times are scaled to the telemetry's span because the first sample
+    falls slightly after the line. A window that disagrees with the timing by
+    more than that is clipped or overlapping, and placing boundaries on it would
+    draw them in the wrong place, so none are returned.
+    """
+    durations = lap.sectors
+    if any(d is None or d <= 0 for d in durations):
+        return [], "this lap has incomplete sector times, so the map is drawn without sectors"
+
+    total = float(sum(durations))
+    span = float(trace.time[-1])
+    if abs(span - total) > max(1.0, 0.05 * total):
+        return [], (
+            f"telemetry spans {span:.2f}s but the sectors total {total:.2f}s, "
+            "so the map is drawn without sectors"
+        )
+
+    elapsed = np.cumsum(durations) * (span / total)
+    ends = np.interp(elapsed, trace.time, trace.distance)
+    starts = [0.0, float(ends[0]), float(ends[1])]
+    return [
+        CircuitSector(number=index, start_m=start, end_m=float(end), duration_s=float(duration))
+        for index, (start, end, duration) in enumerate(zip(starts, ends, durations), start=1)
+    ], None
+
+
 def build_circuit_map(
     trace: LapTrace,
     config: CornerDetectionConfig | None = None,
+    *,
+    lap: Lap | None = None,
 ) -> CircuitMap:
     config = config or CornerDetectionConfig()
     notes: list[str] = []
+
+    sectors: list[CircuitSector] = []
+    if lap is not None:
+        sectors, sector_note = sectors_from_lap(trace, lap)
+        if sector_note:
+            notes.append(sector_note)
 
     grid = np.arange(0.0, trace.length, config.grid_step_m)
     if grid.size < 10:
@@ -196,6 +246,7 @@ def build_circuit_map(
             config=config.as_dict(),
             method="speed-minima-approximation",
             notes=notes,
+            sectors=sectors,
         )
 
     window_pts = int(config.smoothing_window_m / config.grid_step_m)
@@ -257,6 +308,7 @@ def build_circuit_map(
         config=config.as_dict(),
         method="curvature-of-racing-line",
         notes=notes,
+        sectors=sectors,
     )
 
 
