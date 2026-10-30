@@ -565,6 +565,7 @@ export const api = {
   ask: (body: {
     session_key: number;
     question: string;
+    history?: { role: "user" | "assistant"; content: string }[];
     driver_a?: number | null;
     driver_b?: number | null;
     lap_a?: number | null;

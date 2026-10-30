@@ -12,6 +12,13 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Explicit paths work whether uvicorn starts from the workspace or backend.
+# Process variables take precedence, then backend, project, workspace files.
+for _directory in Path(__file__).resolve().parents[1:4]:
+    load_dotenv(_directory / ".env", override=False)
+
 
 def _env_float(name: str, default: float) -> float:
     raw = os.getenv(name)
@@ -91,8 +98,10 @@ class Settings:
 
     # Optional: grounded AI race-engineer reports. Absent key => the endpoint
     # returns the computed evidence bundle without narrative synthesis.
-    anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-opus-4-5"
+    gemma_token: str | None = field(default=None, repr=False)
+    gemma_base_url: str = "http://127.0.0.1:1234/v1"
+    gemma_model: str = "google/gemma-4-26b-a4b"
+    gemma_timeout_seconds: float = 180.0
 
 
 @lru_cache(maxsize=1)
@@ -112,6 +121,8 @@ def get_settings() -> Settings:
         settle_hours=_env_float("APEX_SETTLE_HOURS", 24.0),
         empty_retry_hours=_env_float("APEX_EMPTY_RETRY_HOURS", 24.0),
         cors_origins=tuple(o.strip() for o in origins.split(",")) if origins else Settings.cors_origins,
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
-        anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5"),
+        gemma_token=os.getenv("GEMMA_TOKEN") or None,
+        gemma_base_url=os.getenv("GEMMA_BASE_URL", Settings.gemma_base_url).rstrip("/"),
+        gemma_model=os.getenv("GEMMA_MODEL", Settings.gemma_model),
+        gemma_timeout_seconds=_env_float("GEMMA_TIMEOUT_SECONDS", 180.0),
     )

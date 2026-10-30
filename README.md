@@ -18,7 +18,7 @@ and a difference between two drivers is only called significant when it exceeds
 the combined sampling uncertainty of both traces.
 
 **Stack:** FastAPI · numpy/scipy · Next.js · TypeScript · ECharts · Tailwind
-**Tests:** 95, run against a synthetic circuit with known ground truth
+**Tests:** 103, run against a synthetic circuit with known ground truth
 
 ---
 
@@ -264,7 +264,23 @@ say so.
 The full bundle is returned alongside the answer and rendered in the UI. **Any
 figure in the answer that is not in the bundle is a bug.**
 
-Without `ANTHROPIC_API_KEY` the endpoint still returns the evidence bundle. The
+The Race Engineer workspace uses Gemma through LM Studio's OpenAI-compatible
+chat endpoint. Use **Analyse race** for a report or **Send** for questions and
+follow-ups. Each answer includes its computed evidence. Changing session,
+drivers or laps resets the chat; a reload clears it. The last six successful
+turns provide conversation context, and fresh evidence is computed for every
+request. Generated claims still need human verification.
+
+Set `GEMMA_TOKEN` in `backend/.env`, `Delta/.env`, or the workspace `.env`.
+The backend loads these files regardless of the launch directory; existing
+process variables take precedence. Never use `NEXT_PUBLIC_` for this token.
+Restart the backend after changing credentials. The default endpoint connects
+directly to LM Studio on this Mac. For a backend on another machine, set
+`GEMMA_BASE_URL` to the current tunnel URL plus `/v1`. Requests use
+`stream: false`, compatible with Cloudflare Quick Tunnels. The temporary tunnel
+hostname changes when restarted. LM Studio must be running with Gemma loaded.
+
+Without `GEMMA_TOKEN` the endpoint still returns the evidence bundle. The
 evidence is the valuable part; the prose is a convenience.
 
 ---
@@ -273,7 +289,7 @@ evidence is the valuable part; the prose is a convenience.
 
 ```bash
 cd backend
-python -m unittest discover -s tests -t .     # 95 tests, no network required
+python -m unittest discover -s tests -t .     # 103 tests, no network required
 # or, with pytest installed:  pytest tests/
 ```
 
@@ -309,7 +325,10 @@ exclusion.
 | `APEX_SETTLE_HOURS` | 24 | Hours after a session ends before its data is cached for good |
 | `APEX_EMPTY_RETRY_HOURS` | 24 | How long an empty answer is trusted before it is asked again |
 | `APEX_CORS_ORIGINS` | `localhost:3000` | Comma-separated |
-| `ANTHROPIC_API_KEY` | unset | Optional, race-engineer narration |
+| `GEMMA_TOKEN` | unset | LM Studio token; backend only |
+| `GEMMA_BASE_URL` | `http://127.0.0.1:1234/v1` | Local LM Studio or HTTPS tunnel ending in `/v1` |
+| `GEMMA_MODEL` | `google/gemma-4-26b-a4b` | Exact LM Studio model ID |
+| `GEMMA_TIMEOUT_SECONDS` | 180 | Maximum model request duration |
 
 ### Frontend
 
