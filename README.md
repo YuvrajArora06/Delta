@@ -38,7 +38,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](https://delta-f1.vercel.app/?year=2026&meeting=1297&session=11396) 
+Open https://delta-f1.vercel.app/?year=2026&meeting=1297&session=11396
 ### Windows (PowerShell)
 
 ```powershell
