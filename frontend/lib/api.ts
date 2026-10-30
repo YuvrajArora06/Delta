@@ -1,5 +1,5 @@
 /**
- * Typed client for the ApexTelemetry backend.
+ * Typed client for the Delta backend.
  *
  * Two things this module enforces that are easy to lose elsewhere:
  *
@@ -35,7 +35,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch {
     throw new ApiError(
-      `Cannot reach the ApexTelemetry backend at ${API_BASE}. Start it with ` +
+      `Cannot reach the Delta backend at ${API_BASE}. Start it with ` +
         `"uvicorn app.main:app --port 8000" in the backend directory.`,
       0,
     );

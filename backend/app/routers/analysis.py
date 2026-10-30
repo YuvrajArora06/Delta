@@ -81,7 +81,7 @@ async def compare_csv(
     writer = csv.writer(buffer)
     writer.writerow(
         [
-            f"# ApexTelemetry export - session {session_key}, "
+            f"# Delta export - session {session_key}, "
             f"car {driver_a} lap {result['a']['lap_number']} vs "
             f"car {driver_b} lap {result['b']['lap_number']}"
         ]
@@ -94,7 +94,7 @@ async def compare_csv(
         writer.writerow([d, dl, sd])
 
     buffer.seek(0)
-    filename = f"apex_{session_key}_{driver_a}v{driver_b}.csv"
+    filename = f"delta_{session_key}_{driver_a}v{driver_b}.csv"
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",
