@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { api, type LapInfo } from "@/lib/api";
 import { lapTime, teamColour } from "@/lib/format";
 import { useSelection } from "./SessionPicker";
-import { useAsync } from "./ui";
+import { ErrorPanel, useAsync } from "./ui";
 
 /**
  * Pick two drivers and the laps to compare.
@@ -64,6 +64,11 @@ export function DriverLapPicker() {
         value={selection.lapB}
         onChange={(value) => update({ lapB: value })}
       />
+      {drivers.error && (
+        <div className="sm:col-span-2 lg:col-span-4 rounded border border-signal-alert/30 bg-signal-alert/5">
+          <ErrorPanel error={drivers.error} onRetry={drivers.reload} />
+        </div>
+      )}
     </div>
   );
 }
@@ -175,6 +180,17 @@ function LapSelect({
         <p className="mt-1 text-2xs leading-snug text-signal-warn">
           {selected.flags.join(" · ")}
         </p>
+      )}
+      {laps.error && (
+        <div
+          className="mt-1.5 flex items-start justify-between gap-2 text-2xs leading-snug text-signal-alert"
+          role="alert"
+        >
+          <span>Could not load laps: {laps.error.message}</span>
+          <button type="button" className="shrink-0 underline" onClick={laps.reload}>
+            Retry
+          </button>
+        </div>
       )}
     </div>
   );

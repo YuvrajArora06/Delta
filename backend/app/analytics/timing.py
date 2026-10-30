@@ -22,6 +22,17 @@ label a running car as retired.
 """
 
 
+def tracks_retirements(session_type: str | None) -> bool:
+    """Whether lap count can say anything about a car having stopped.
+
+    Only in a race (OpenF1 types sprints as ``Race`` too) does everyone run the
+    same distance. In practice and qualifying, lap counts differ by strategy: in
+    2026 Austin qualifying Piastri ran 20 laps and Verstappen 12, and Verstappen
+    was P2. Applying the lap-count rule there demotes most of the field.
+    """
+    return session_type == "Race"
+
+
 def is_retired(laps_completed: int, leader_laps: int, *, margin: int = RETIREMENT_LAP_MARGIN) -> bool:
     """Whether a car should be treated as no longer running.
 

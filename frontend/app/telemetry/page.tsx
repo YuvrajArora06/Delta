@@ -17,8 +17,8 @@ import {
   axis,
   useAsync,
 } from "@/components/ui";
-import { api, type CompareResponse } from "@/lib/api";
-import { DASH, delta as fmtDelta, lapTime, metres, pairs } from "@/lib/format";
+import { api, type CompareResponse, type DriverInfo } from "@/lib/api";
+import { DASH, delta as fmtDelta, lapTime, metres, pairs, teamColour } from "@/lib/format";
 
 const COLOUR_A = "#4da6ff";
 const COLOUR_B = "#ffb020";
@@ -43,6 +43,11 @@ export default function TelemetryPage() {
       }),
     [selection.sessionKey, selection.driverA, selection.driverB, selection.lapA, selection.lapB, mode],
     ready,
+  );
+  const drivers = useAsync(
+    () => api.drivers(selection.sessionKey as number),
+    [selection.sessionKey],
+    selection.sessionKey != null,
   );
 
   return (
@@ -99,17 +104,23 @@ export default function TelemetryPage() {
           <ErrorPanel error={comparison.error} onRetry={comparison.reload} />
         </Panel>
       ) : comparison.data ? (
-        <Comparison data={comparison.data} />
+        <Comparison data={comparison.data} drivers={drivers.data?.drivers ?? []} />
       ) : null}
     </div>
   );
 }
 
-function Comparison({ data }: { data: CompareResponse }) {
+function Comparison({ data, drivers }: { data: CompareResponse; drivers: DriverInfo[] }) {
   const { delta, a, b } = data;
 
   const labelA = `#${a.driver_number} L${a.lap_number}`;
   const labelB = `#${b.driver_number} L${b.lap_number}`;
+  const driverA = driverTheme(drivers, a.driver_number, COLOUR_A);
+  const driverB = driverTheme(drivers, b.driver_number, COLOUR_B);
+  // Teammates intentionally share the same team colour. A dashed B trace
+  // keeps those comparisons legible without giving either driver a false team.
+  const driverBDashed =
+    driverA.teamName != null && driverA.teamName.toUpperCase() === driverB.teamName?.toUpperCase();
 
   const speedOption = useMemo<EChartsOption>(
     () => ({
@@ -123,11 +134,11 @@ function Comparison({ data }: { data: CompareResponse }) {
         right: 0,
       },
       series: [
-        line(labelA, pairs(a.channels.distance, a.channels.speed), COLOUR_A),
-        line(labelB, pairs(b.channels.distance, b.channels.speed), COLOUR_B),
+        line(labelA, pairs(a.channels.distance, a.channels.speed), driverA.colour),
+        line(labelB, pairs(b.channels.distance, b.channels.speed), driverB.colour, driverBDashed),
       ],
     }),
-    [a, b, labelA, labelB],
+    [a, b, driverA.colour, driverB.colour, driverBDashed, labelA, labelB],
   );
 
   const deltaOption = useMemo<EChartsOption>(() => {
@@ -163,13 +174,13 @@ function Comparison({ data }: { data: CompareResponse }) {
       xAxis: axis("", { min: 0, max: Math.max(a.length_m, b.length_m) }),
       yAxis: axis("%", { min: 0, max: 105 }),
       series: [
-        line(`${labelA} throttle`, pairs(a.channels.distance, a.channels.throttle), COLOUR_A),
-        line(`${labelB} throttle`, pairs(b.channels.distance, b.channels.throttle), COLOUR_B),
+        line(`${labelA} throttle`, pairs(a.channels.distance, a.channels.throttle), driverA.colour),
+        line(`${labelB} throttle`, pairs(b.channels.distance, b.channels.throttle), driverB.colour, driverBDashed),
         step(`${labelA} brake`, pairs(a.channels.distance, a.channels.brake), "#ff4d5e"),
         step(`${labelB} brake`, pairs(b.channels.distance, b.channels.brake), "#ff8a94"),
       ],
     }),
-    [a, b, labelA, labelB],
+    [a, b, driverA.colour, driverB.colour, driverBDashed, labelA, labelB],
   );
 
   const gearOption = useMemo<EChartsOption>(
@@ -179,11 +190,11 @@ function Comparison({ data }: { data: CompareResponse }) {
       xAxis: axis("", { min: 0, max: Math.max(a.length_m, b.length_m) }),
       yAxis: axis("gear", { min: 0, max: 9, interval: 1 }),
       series: [
-        step(labelA, pairs(a.channels.distance, a.channels.gear), COLOUR_A),
-        step(labelB, pairs(b.channels.distance, b.channels.gear), COLOUR_B),
+        step(labelA, pairs(a.channels.distance, a.channels.gear), driverA.colour),
+        step(labelB, pairs(b.channels.distance, b.channels.gear), driverB.colour, driverBDashed),
       ],
     }),
-    [a, b, labelA, labelB],
+    [a, b, driverA.colour, driverB.colour, driverBDashed, labelA, labelB],
   );
 
   const rpmOption = useMemo<EChartsOption>(
@@ -193,11 +204,11 @@ function Comparison({ data }: { data: CompareResponse }) {
       xAxis: axis("distance (m)", { min: 0, max: Math.max(a.length_m, b.length_m) }),
       yAxis: axis("rpm", { scale: true }),
       series: [
-        line(labelA, pairs(a.channels.distance, a.channels.rpm), COLOUR_A),
-        line(labelB, pairs(b.channels.distance, b.channels.rpm), COLOUR_B),
+        line(labelA, pairs(a.channels.distance, a.channels.rpm), driverA.colour),
+        line(labelB, pairs(b.channels.distance, b.channels.rpm), driverB.colour, driverBDashed),
       ],
     }),
-    [a, b, labelA, labelB],
+    [a, b, driverA.colour, driverB.colour, driverBDashed, labelA, labelB],
   );
 
   const biggestLoss = useMemo(
@@ -379,25 +390,41 @@ function Stat({
   );
 }
 
-function line(name: string, data: [number, number][], colour: string) {
+function driverTheme(drivers: DriverInfo[], driverNumber: number, fallback: string) {
+  const driver = drivers.find((candidate) => candidate.driver_number === driverNumber);
+  return {
+    colour: driver?.team_colour ? teamColour(driver.team_colour) : fallback,
+    teamName: driver?.team_name ?? null,
+  };
+}
+
+function line(name: string, data: [number, number][], colour: string, dashed = false) {
   return {
     type: "line" as const,
     name,
     data,
     showSymbol: false,
     sampling: "lttb" as const,
-    lineStyle: { width: 1.4, color: colour },
+    lineStyle: {
+      width: 1.4,
+      color: colour,
+      type: dashed ? ("dashed" as const) : ("solid" as const),
+    },
     emphasis: { focus: "series" as const },
   };
 }
 
-function step(name: string, data: [number, number][], colour: string) {
+function step(name: string, data: [number, number][], colour: string, dashed = false) {
   return {
     type: "line" as const,
     name,
     data,
     step: "end" as const,
     showSymbol: false,
-    lineStyle: { width: 1.2, color: colour },
+    lineStyle: {
+      width: 1.2,
+      color: colour,
+      type: dashed ? ("dashed" as const) : ("solid" as const),
+    },
   };
 }

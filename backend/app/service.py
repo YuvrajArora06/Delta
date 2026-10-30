@@ -37,6 +37,7 @@ from .analytics import (
     is_retired,
     last_timed_lap,
     tower_sort_key,
+    tracks_retirements,
     visible_gaps,
     detect_brake_events,
     lap_window,
@@ -431,8 +432,9 @@ class SessionService:
     # -- timing tower ---------------------------------------------------
 
     async def timing_tower(self, session_key: int) -> dict:
-        drivers, laps, stints, intervals, positions, race_control, weather, status = (
+        session, drivers, laps, stints, intervals, positions, race_control, weather, status = (
             await asyncio.gather(
+                self.provider.session(session_key),
                 self.provider.drivers(session_key),
                 self.provider.laps(session_key),
                 self.provider.stints(session_key),
@@ -471,7 +473,9 @@ class SessionService:
         # forever. Rendering those as current makes a car fifty laps down look
         # like it is a second behind, so laps completed decides who is still
         # running and stale figures are suppressed for everyone else.
+        # Outside a race, lap counts differ by strategy, not by who has stopped.
         leader_laps = max((len(l) for l in by_driver.values()), default=0)
+        race = tracks_retirements(session.session_type if session else None)
 
         rows = []
         for driver in drivers:
@@ -480,7 +484,7 @@ class SessionService:
             last = last_timed_lap(driver_laps)
             latest = driver_laps[-1] if driver_laps else None
             best = min(timed, key=lambda l: l.lap_duration) if timed else None
-            retired = is_retired(len(driver_laps), leader_laps)
+            retired = race and is_retired(len(driver_laps), leader_laps)
             stint = current_stint.get(driver.driver_number)
             interval = latest_interval.get(driver.driver_number)
 
