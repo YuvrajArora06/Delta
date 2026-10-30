@@ -1,6 +1,0 @@
-node_modules/
-.next/
-# Points at http://127.0.0.1:8000 for local development; it must not leak
-# into the production build.
-.env.local
-*.tsbuildinfo
