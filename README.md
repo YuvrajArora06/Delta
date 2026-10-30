@@ -18,7 +18,7 @@ and a difference between two drivers is only called significant when it exceeds
 the combined sampling uncertainty of both traces.
 
 **Stack:** FastAPI · numpy/scipy · Next.js · TypeScript · ECharts · Tailwind
-**Tests:** 95, run against a synthetic circuit with known ground truth
+**Tests:** 99, run against a synthetic circuit with known ground truth
 
 ---
 
@@ -39,6 +39,26 @@ npm run dev
 ```
 
 Open http://localhost:3000. Interactive API docs are at http://localhost:8000/docs.
+
+### Windows (PowerShell)
+
+```powershell
+# 1. Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+
+# 2. Frontend, in a second terminal
+cd frontend
+npm.cmd install
+copy .env.example .env.local
+npm.cmd run dev
+```
+
+`npm.cmd` rather than `npm`: PowerShell's default execution policy blocks the
+`npm.ps1` shim, and the failure can surface as a bare exit code 1 with no
+message. Calling the `.cmd` shim sidesteps the policy without changing it.
 
 ### Resetting the frontend development server
 
@@ -124,6 +144,7 @@ backend/
       braking.py           brake-onset detection with explicit uncertainty
       corners.py           circuit geometry from position, corner metrics
       stints.py            degradation regression, pit stops, scenarios
+      timing.py            timing-tower order, retirement detection, gap display
     service.py             orchestration between provider and analytics
     warm.py                pre-fills the permanent cache (python -m app.warm)
     routers/               FastAPI routes
@@ -230,6 +251,23 @@ Caveats that travel with every result:
   labelled `estimated`, and where position data is missing no apex is reported
   at all.
 
+### Timing tower order
+
+Positions are not computed. Each row takes the **latest position OpenF1
+published** for that driver: race order in a race, classification by fastest
+lap in practice and qualifying.
+
+The provider has no retirement flag, and a car that stops keeps its last
+position, gap and interval in the feed forever. So, **in races only** (OpenF1
+types sprints as `Race` too), a car more than two laps behind the car with the
+most laps is treated as retired: its gaps are shown as a dash and it is sorted
+below the runners, ordered by how far it got.
+
+The rule is deliberately limited to races. In practice and qualifying, lap
+counts differ by programme, not by who has stopped: in 2026 Austin qualifying
+Piastri ran 20 laps and Verstappen 12, and Verstappen was P2. Applying the rule
+there demoted 19 of 22 drivers.
+
 ### Degradation
 
 A least-squares fit of lap time against tyre age, after removing laps above 105%
@@ -273,7 +311,7 @@ evidence is the valuable part; the prose is a convenience.
 
 ```bash
 cd backend
-python -m unittest discover -s tests -t .     # 95 tests, no network required
+python -m unittest discover -s tests -t .     # 99 tests, no network required
 # or, with pytest installed:  pytest tests/
 ```
 
@@ -299,6 +337,16 @@ exclusion.
 ## Configuration
 
 ### Backend
+
+The backend reads these from the process environment and does not load
+`backend/.env` on its own. To keep them in a file, copy `backend/.env.example`
+to `backend/.env` and have uvicorn load it:
+
+```bash
+uvicorn app.main:app --reload --port 8000 --env-file .env
+```
+
+`.env` is git-ignored, so keys kept there are not committed.
 
 | Variable | Default | Purpose |
 |---|---|---|
