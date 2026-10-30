@@ -159,6 +159,8 @@ export default function CornersPage() {
               <Panel title="Corners" bodyClassName="space-y-2 p-3">
                 <CornerChips
                   corners={analysis.data.circuit.corners}
+                  sectors={analysis.data.circuit.sectors ?? []}
+                  lapLength={analysis.data.circuit.lap_length_m}
                   selected={selected}
                   onSelect={setSelected}
                 />

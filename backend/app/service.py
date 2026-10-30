@@ -298,7 +298,7 @@ class SessionService:
             raise ProviderError(f"No timed lap for reference car {reference_driver}.", status=404)
 
         trace = await self.lap_trace(session_key, reference_driver, best.lap_number)
-        return build_circuit_map(trace, config), trace
+        return build_circuit_map(trace, config, lap=best), trace
 
     async def corner_analysis(
         self,
@@ -322,7 +322,10 @@ class SessionService:
             session_key, driver_b, comparison["b"]["lap_number"]
         )
 
-        circuit = build_circuit_map(trace_a, corner_config)
+        laps_a = await self.provider.laps(session_key, driver_a)
+        lap_model_a = next((l for l in laps_a if l.lap_number == trace_a.lap_number), None)
+
+        circuit = build_circuit_map(trace_a, corner_config, lap=lap_model_a)
         events_a = detect_brake_events(trace_a, brake_config)
         events_b = detect_brake_events(trace_b, brake_config)
 
@@ -366,6 +369,10 @@ class SessionService:
                         "First sample where the brake flag goes high and stays high for at least "
                         "min_duration_s. Reported as the midpoint between the last unbraked and "
                         "first braked sample, with half that interval as uncertainty."
+                    ),
+                    "sectors": (
+                        "Boundaries are where the reference lap's official sector times elapse on "
+                        "its telemetry, so they are calculated positions, not surveyed timing lines."
                     ),
                     "minimum_speed": "Lowest speed sample between the corner entry and exit distances.",
                     "apex": (

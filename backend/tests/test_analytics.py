@@ -345,6 +345,44 @@ class TestCircuitMap(unittest.TestCase):
         # The stitched corner must have a sane radius, not the stub's artefact.
         self.assertAlmostEqual(wrapping[0].min_radius_m, 90.0, delta=35.0)
 
+    def test_sector_boundaries_land_where_the_sector_times_elapse(self):
+        trace, lap, _ = make_trace()
+        first, second = trace.length * 0.3, trace.length * 0.7
+        t1, t2 = (float(t) for t in trace.time_at(np.array([first, second])))
+        lap.duration_sector_1 = t1
+        lap.duration_sector_2 = t2 - t1
+        lap.duration_sector_3 = float(trace.time[-1]) - t2
+
+        sectors = build_circuit_map(trace, lap=lap).sectors
+
+        self.assertEqual([s.number for s in sectors], [1, 2, 3])
+        self.assertEqual(sectors[0].start_m, 0.0)
+        self.assertAlmostEqual(sectors[0].end_m, first, delta=1.0)
+        self.assertAlmostEqual(sectors[1].end_m, second, delta=1.0)
+        self.assertEqual(sectors[1].start_m, sectors[0].end_m)
+        self.assertEqual(sectors[2].start_m, sectors[1].end_m)
+        self.assertAlmostEqual(sectors[2].end_m, trace.length, delta=1.0)
+
+    def test_missing_sector_time_draws_no_sectors(self):
+        trace, lap, _ = make_trace()
+        lap.duration_sector_1, lap.duration_sector_2, lap.duration_sector_3 = 20.0, None, 20.0
+
+        circuit = build_circuit_map(trace, lap=lap)
+
+        self.assertEqual(circuit.sectors, [])
+        self.assertTrue(any("incomplete sector times" in n for n in circuit.notes))
+
+    def test_sector_times_disagreeing_with_telemetry_draw_no_sectors(self):
+        """A clipped telemetry window would put every boundary in the wrong place."""
+        trace, lap, _ = make_trace()
+        span = float(trace.time[-1])
+        lap.duration_sector_1 = lap.duration_sector_2 = lap.duration_sector_3 = span
+
+        circuit = build_circuit_map(trace, lap=lap)
+
+        self.assertEqual(circuit.sectors, [])
+        self.assertTrue(any("drawn without sectors" in n for n in circuit.notes))
+
     def test_threshold_changes_what_counts_as_a_corner(self):
         trace, _, _ = make_trace()
         tight = build_circuit_map(trace, CornerDetectionConfig(radius_threshold_m=60.0))
